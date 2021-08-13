@@ -1,0 +1,2 @@
+/app/local?protocol=7&client=js&version=4.3.1&flash=false
+{"event":"pusher:subscribe","data":{"auth":"","channel":"channel"}}
