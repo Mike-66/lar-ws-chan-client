@@ -22,6 +22,9 @@
 #include <boost/asio/strand.hpp>
 #include <boost/asio/bind_executor.hpp>
 
+#include <boost/chrono.hpp>
+#include <boost/thread/thread.hpp>
+
 #define DIALOGMAX 10
 
 typedef std::chrono::duration<long long int,std::ratio<1,1000>> MyMilliSecondTick;
@@ -59,6 +62,7 @@ protected:
 public:
     // Resolver and socket require an io_context
     explicit session(boost::asio::io_context &ioc);
+    ~session();
 
     std::shared_ptr<session> * run(char const *host,
                                    char const *port,
@@ -73,12 +77,15 @@ private:
 protected:
 
     //std::shared_ptr<session> *sess;
+    std::string sendline[DIALOGMAX];
+    std::shared_ptr<session> *sess;
 
 public:
     ws_client_async();
     ~ws_client_async();
 
-    static std::shared_ptr<session> * Init(const char*  host, const char* port, const char*  dialogfile);
+    //std::shared_ptr<session> * Init(const char*  host, const char* port, const char*  dialogfile);
+    int Init(const char*  host, const char* port, const char*  dialogfile);
 
     static int run(int millis);
 

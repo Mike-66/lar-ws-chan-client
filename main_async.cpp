@@ -17,12 +17,27 @@ int main(int argc, char** argv)
     const char* port = argv[2];
     const char* dialogfile = argv[3];
 
-    ws_client_async *wsc = new ws_client_async();
-    std::shared_ptr<session> *sess = wsc->Init(host,port,dialogfile);
+    ws_client_async *wsc=NULL;
+reconnect:
+    if (wsc != NULL)
+        delete(wsc);
+    wsc = new ws_client_async();
+    wsc->Init(host,port,dialogfile);
 
+    int runs=0;
+    int millis=1000;
     do {
-        if(wsc->run(1000)!=0)
-        break;
+        std::cout<<"performing run "<<runs<<std::endl;
+        if(runs++==100)
+            millis=-1;
+        if(wsc->run(millis)!=0) {
+            if(millis==-1)
+                break;
+            else {
+                boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
+                goto reconnect;
+            }
+        }
     }while(1);
 
     return EXIT_SUCCESS;

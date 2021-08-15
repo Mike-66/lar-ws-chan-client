@@ -38,6 +38,12 @@ session::session(boost::asio::io_context &ioc) : strand_(ioc.get_executor()), ws
     set_timer(5);
     std::cout << "timer_.async_wait end" << std::endl;
 
+    std::cout << "session created " << typeid(this).name() << std::endl;
+}
+//-----------------------------------------------------------
+session::~session()
+{
+    std::cout << "session destroyed " << typeid(this).name() << std::endl;
 }
 //-----------------------------------------------------------
 void session::do_timeout(void) {
@@ -95,9 +101,8 @@ std::shared_ptr<session> * session::run(
                     std::placeholders::_1,
                     std::placeholders::_2));
 
-    return(shared_from_this());
 }
-//-----------------------------------------------------------
+//---------------------------------------------------------
 void session::on_resolve(
             boost::system::error_code ec,
             tcp::resolver::results_type results) {
@@ -120,7 +125,7 @@ void session::on_connect(boost::system::error_code ec) {
         if (ec)
             return fail(ec, "connect");
 
-        std::cout<<"1 sending: "<<sendline_[stagecounter]<<std::endl;
+        std::cout << typeid(this).name() << " 1 sending: "<<sendline_[stagecounter]<<std::endl;
         // Perform the websocket handshake
         ws_.async_handshake(host_, sendline_[stagecounter++],
                             std::bind(
@@ -248,11 +253,10 @@ ws_client_async::~ws_client_async()
 }
 //-----------------------------------------------------------
 
-session *psess;
-std::shared_ptr<session> * ws_client_async::Init(const char*  host, const char* port, const char*  dialogfile)
+//std::shared_ptr<session> * ws_client_async::Init(const char*  host, const char* port, const char*  dialogfile)
+int ws_client_async::Init(const char*  host, const char* port, const char*  dialogfile)
 {
     boost::filesystem::ifstream fileHandler(dialogfile);
-    std::string sendline[DIALOGMAX];
     int    lineno=0;
     while(getline(fileHandler, sendline[lineno])) {
         std::cout << "read fromfile " << sendline[lineno] << std::endl;
@@ -264,16 +268,21 @@ std::shared_ptr<session> * ws_client_async::Init(const char*  host, const char* 
     }
 
     // Launch the asynchronous operation
-    std::shared_ptr<session> *sess = std::make_shared<session>(ioc)->run(host, port, sendline, lineno);
-    psess=sess->get();
-    //std::make_shared<session>(ioc)->run(host, port, sendline, lineno);
-    ioc.run();
+    ioc.reset();
+    sess = std::make_shared<session>(ioc)->run(host, port, sendline, lineno);
+    std::cout << typeid(sess).name() << " in Init"<<std::endl;
 
-    return(sess);
+    return(0);
 }
 //-----------------------------------------------------------
 int ws_client_async::run(int millis)
 {
+    if(millis==-1) {
+        std::cout<<"stopping ioc"<<std::endl;
+        ioc.stop();
+        return(-1);
+    }
+
     MyMilliSecondTick milli(1000);
 
     size_t handlers_executed=ioc.run_for( milli );
@@ -282,8 +291,10 @@ int ws_client_async::run(int millis)
         std::cout<<"leaving handler execution loop"<<std::endl;
         return(-1);
     }
-    ioc.restart();
-    //psess->test("bananentest von aussen");
+    else {
+        ioc.restart();
+    }
+
     return(0);
 }
 
