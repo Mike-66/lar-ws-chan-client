@@ -25,6 +25,11 @@
 
 #include <boost/filesystem.hpp>
 
+#include <boost/bind.hpp>
+#include <boost/asio/placeholders.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/asio/bind_executor.hpp>
+
 #define DIALOGMAX 10
 
 using tcp = boost::asio::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
@@ -42,7 +47,10 @@ fail(boost::system::error_code ec, char const* what)
 // Sends a WebSocket message and prints the response
 class session : public std::enable_shared_from_this<session>
 {
-    tcp::resolver resolver_;
+    // Access the derived class, this is part of
+    // the Curiously Recurring Template Pattern idiom.
+
+    tcp::resolver *resolver_;
     websocket::stream<tcp::socket> ws_;
     boost::beast::multi_buffer buffer_;
     std::string host_;
@@ -50,14 +58,57 @@ class session : public std::enable_shared_from_this<session>
     int lineno_;
     int stagecounter;
 
+protected:
+    boost::asio::strand<boost::asio::io_context::executor_type> strand_;
+    boost::asio::steady_timer timer_;
 
 public:
     // Resolver and socket require an io_context
     explicit
     session(boost::asio::io_context& ioc)
-        : resolver_(ioc)
+        : strand_(ioc.get_executor())
         , ws_(ioc)
+        , timer_(ioc)
     {
+        resolver_ = new tcp::resolver(ioc);
+
+        std::cout<<"timer_.async_wait start"<<std::endl;
+        timer_.expires_after(std::chrono::seconds(5));
+        timer_.async_wait(
+                boost::asio::bind_executor(
+                        strand_,
+                        std::bind(
+                                &session::on_timer,
+                                this,
+                                std::placeholders::_1)));
+        std::cout<<"timer_.async_wait end"<<std::endl;
+    }
+
+    void do_timeout(void)
+    {
+        std::cout<<"do_timeout fired"<<std::endl;
+    }
+
+    void
+    on_timer(boost::system::error_code ec)
+    {
+        if(ec && ec != boost::asio::error::operation_aborted)
+            return fail(ec, "timer");
+
+        std::cout<<"on_timer fired"<<std::endl;
+
+        // Verify that the timer really expired since the deadline may have moved.
+        if(timer_.expiry() <= std::chrono::steady_clock::now())
+            do_timeout();
+
+        timer_.expires_after(std::chrono::seconds(5));
+        timer_.async_wait(
+                boost::asio::bind_executor(
+                        strand_,
+                        std::bind(
+                                &session::on_timer,
+                                this,
+                                std::placeholders::_1)));
     }
 
     // Start the asynchronous operation
@@ -75,7 +126,7 @@ public:
         stagecounter=0;
 
         // Look up the domain name
-        resolver_.async_resolve(
+        resolver_->async_resolve(
             host,
             port,
             std::bind(
@@ -271,8 +322,9 @@ int main(int argc, char** argv)
     session *psess=sess->get();
     // Run the I/O service. The call will return when
     // the socket is closed.
-    //ioc.run();
+    ioc.run();
 
+    /*
     do {
         size_t handlers_executed=ioc.run_for( milli_1000 );
         std::cout<<"executed "<< handlers_executed<<" handlers"<<std::endl;
@@ -283,7 +335,7 @@ int main(int argc, char** argv)
         ioc.restart();
         psess->test("bananentest von aussen");
     }while(1);
-    /**/
+    */
 
 
     return EXIT_SUCCESS;
