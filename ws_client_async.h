@@ -31,16 +31,14 @@ class ws_client_async {
 private:
 protected:
 
-    // The io_context is required for all I/O
-    boost::asio::io_context ioc;
 
 public:
     ws_client_async();
     ~ws_client_async();
 
-    int Init(const char*  host, const char* port, const char*  dialogfile);
+    static int Init(const char*  host, const char* port, const char*  dialogfile);
 
-    int run(int millis);
+    static int run(int millis);
 
 };
 

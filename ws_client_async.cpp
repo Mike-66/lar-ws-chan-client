@@ -29,6 +29,9 @@ void fail(boost::system::error_code ec, char const *what) {
     std::cerr << what << ": " << ec.message() << "\n";
 }
 
+// The io_context is required for all I/O
+boost::asio::io_context ioc;
+
 // Sends a WebSocket message and prints the response
 class session : public std::enable_shared_from_this<session> {
     // Access the derived class, this is part of
@@ -252,7 +255,6 @@ public:
     }
 };
 
-session *psess;
 //-----------------------------------------------------------
 ws_client_async::ws_client_async()
 {
@@ -264,6 +266,8 @@ ws_client_async::~ws_client_async()
 
 }
 //-----------------------------------------------------------
+session *psess;
+
 int ws_client_async::Init(const char*  host, const char* port, const char*  dialogfile)
 {
     boost::filesystem::ifstream fileHandler(dialogfile);
@@ -279,8 +283,10 @@ int ws_client_async::Init(const char*  host, const char* port, const char*  dial
     }
 
     // Launch the asynchronous operation
-    std::shared_ptr<session> *sess = std::make_shared<session>(ioc)->run(host, port, sendline, lineno);
-    psess=sess->get();
+    //std::shared_ptr<session> *sess = std::make_shared<session>(ioc)->run(host, port, sendline, lineno);
+    //psess=sess->get();
+    std::make_shared<session>(ioc)->run(host, port, sendline, lineno);
+    //ioc.run();
 
     return(0);
 }
@@ -296,7 +302,7 @@ int ws_client_async::run(int millis)
         return(-1);
     }
     ioc.restart();
-    psess->test("bananentest von aussen");
+    //psess->test("bananentest von aussen");
     return(0);
 }
 
