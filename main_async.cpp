@@ -18,7 +18,7 @@ int main(int argc, char** argv)
     const char* dialogfile = argv[3];
 
     ws_client_async *wsc = new ws_client_async();
-    wsc->Init(host,port,dialogfile);
+    std::shared_ptr<session> *sess = wsc->Init(host,port,dialogfile);
 
     do {
         if(wsc->run(1000)!=0)
