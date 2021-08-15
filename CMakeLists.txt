@@ -9,7 +9,7 @@ target_link_libraries(lar-ws-chan-client-sync pthread)
 target_link_libraries(lar-ws-chan-client-sync boost_thread)
 target_link_libraries(lar-ws-chan-client-sync boost_chrono)
 
-add_executable(lar-ws-chan-client-async main_async.cpp ws_client_async.cpp ws_client_async.h)
+add_executable(lar-ws-chan-client-async main_async.cpp)
 target_link_libraries(lar-ws-chan-client-async boost_system)
 target_link_libraries(lar-ws-chan-client-async pthread)
 target_link_libraries(lar-ws-chan-client-async boost_thread)
